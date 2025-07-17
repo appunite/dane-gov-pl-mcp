@@ -1,0 +1,15 @@
+category_id,category_title,category_code,usage_count
+149,Regiony i miasta,REGI,981
+148,Rząd i sektor publiczny,GOVE,849
+144,Nauka i technologia,TECH,562
+145,Gospodarka i finanse,ECON,473
+147,Zdrowie,HEAL,437
+141,Środowisko,ENVI,299
+146,Ludność i społeczeństwo,SOCI,274
+140,"Edukacja, kultura i sport",EDUC,179
+139,"Rolnictwo, rybołówstwo, leśnictwo i żywność",AGRI,161
+143,Transport,TRAN,140
+142,Energia,ENER,130
+150,"Sprawiedliwość, ustrój sądów i bezpieczeństwo publiczne",JUST,102
+151,Kwestie międzynarodowe,INTR,67
+152,Ukraina,UKLF,28
