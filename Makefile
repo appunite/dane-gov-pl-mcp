@@ -12,19 +12,19 @@ FLY_VOLUME_REGION := waw
 
 ## LOCAL STDIO
 stdio:
-	@uv run python src/app.py --transport stdio --host 0.0.0.0 --port $(PORT)
+	@uv run python -m src.app.py --transport stdio --host 0.0.0.0 --port $(PORT)
 
 
 
 ## LOCAL SSE
 sse:
-	@uv run python src/app.py --transport sse --host 0.0.0.0 --port $(PORT)
+	@uv run python -m src.app.py --transport sse --host 0.0.0.0 --port $(PORT)
 
 
 
 ## LOCAL STREAMABLE-HTTP
 streamable-http:
-	@uv run python src/app.py --transport streamable-http --host 0.0.0.0 --port $(PORT)
+	@uv run python -m src.app.py --transport streamable-http --host 0.0.0.0 --port $(PORT)
 
 
 
