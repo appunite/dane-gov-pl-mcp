@@ -53,3 +53,9 @@ set-secrets:
 
 deploy: set-secrets
 	@flyctl deploy
+
+
+
+## UTILS UPDATE CATEGORIES
+update-categories:
+	@uv run python -m src.utils.update_categories
