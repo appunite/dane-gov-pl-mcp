@@ -1,14 +1,11 @@
+from typing import Optional, List, Literal
+
 from async_lru import alru_cache
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+import polars as pl
 
 from src.utils.server_config import mcp
 from src.tools.utils import _get
-
-from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
-from datetime import datetime
-
-
 
 class DatasetSearchFilters(BaseModel):
     """Data object for dataset search.
@@ -33,8 +30,8 @@ class DatasetSearchFilters(BaseModel):
     notes_match: Optional[str] = Field(None, description="Searches for instances in which notes matches the provided value. (e.g., 'economics')")
     notes_query: Optional[str] = Field(None, description="Searches for instances that matches the provided query string. (e.g., '*eco* AND water', 'lorem', 'lorem OR ipsum*')")
     
-    categories_terms: Optional[str] = Field(None, description="Filters instances in which categories_1 ID matches to any of the provided value. (e.g., '140,139')")
-    category_terms: Optional[str] = Field(None, description="Filters instances in which categories_2 ID matches to any of the provided value. (e.g., '140,139')")
+    categories_1_terms: Optional[str] = Field(None, description="Filters instances in which categories_1 ID matches to any of the provided value. (e.g., '140,139')")
+    category_2_terms: Optional[str] = Field(None, description="Filters instances in which category_2 ID matches to any of the provided value. (e.g., '20')")
 
     institution_terms: Optional[str] = Field(None, description="Filters instances in which institution ID matches to any of the provided value. (e.g., '24,123')")
 
@@ -61,19 +58,24 @@ async def get_dataset_details(dataset_id: int) -> dict:
     return data.get("data", {})
 
 
-@mcp.tool()
-async def list_categories() -> dict:
-    """List all available categories for dataset filtering."""
-    pass
+# @mcp.tool()
+async def list_categories_1() -> dict:
+    """List all available categories_1 for dataset filtering."""
+    # Load ./data/categories_unique.csv
+    df = pl.read_csv("./data/categories_unique.csv")
+    return df.to_dicts()
 
-@mcp.tool()
-async def list_category() -> dict:
-    """List all available categories for dataset filtering."""
-    pass
+# @mcp.tool()
+async def list_category_2() -> dict:
+    """List all available categories_2 for dataset filtering."""
+    # Load ./data/category_unique.csv
+    df = pl.read_csv("./data/category_unique.csv")
+    return df.to_dicts()
 
 
 if __name__ == "__main__":
     import asyncio
-    title_filter = TitleFilter()
-    x = asyncio.run(search_datasets_advanced(title_filter, None, None, None))
-    # print(f"{x}\n{len(x)}")
+    x = asyncio.run(list_categories_1())
+    # title_filter = TitleFilter()
+    # x = asyncio.run(search_datasets_advanced(title_filter, None, None, None))
+    print(f"{x}\n{len(x)}")

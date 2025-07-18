@@ -59,3 +59,6 @@ deploy: set-secrets
 ## UTILS UPDATE CATEGORIES
 update-categories:
 	@uv run python -m src.utils.update_categories
+
+run-%:
+	@uv run python -m src.tools.$*
