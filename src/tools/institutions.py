@@ -113,27 +113,6 @@ async def get_institutions_details(institution_ids: list[int]) -> list[dict]:
     return details
 
 
-@mcp.tool()
-async def get_institutions_datasets(institution_ids: list[int]) -> dict[int, list[dict]]:
-    """Get datasets of a specific institutions."""
-    # TODO: It also needs pagination and allows filtering etc.
-    datasets = {}
-    for id in institution_ids:
-        data = await _get(f"/institutions/{id}/datasets")
-        data = data.get("data", {})
-        datasets[id] = [
-            {
-                "id": x.get("id"),
-                "title": x.get("attributes", {}).get("title"),
-                "resources_count": x.get("relationships", {}).get("resources", {}).get("meta", {}).get("count", 0),
-                "showcases_count": x.get("relationships", {}).get("showcases", {}).get("meta", {}).get("count", 0)
-            }
-            for x in data
-        ]
-    return datasets
-
-
-
 # if __name__ == "__main__":
     # import asyncio
     # x = asyncio.run(list_institutions())
