@@ -55,6 +55,12 @@ def parse_args() -> argparse.Namespace:
         required=False,
         help="Mount path for HTTP/SSE (default /mcp or /sse)."
     )
+    parser.add_argument(
+        "--debug",
+        choices=["True", "False"],
+        default="False",
+        help="Enable debug mode."
+    )
 
     parser_args = parser.parse_args()
 
@@ -64,12 +70,17 @@ def parse_args() -> argparse.Namespace:
         parser_args.path = parser_args.path or "/mcp"
     else:
         parser_args.path = None
+
+    parser_args.debug = parser_args.debug != "False"
+
     return parser_args
 
 
 if __name__ == "__main__":
     args = parse_args()
-    asyncio.run(_log_registered_tools())
+
+    if args.debug:
+        asyncio.run(_log_registered_tools())
     
     if args.transport == "stdio":
         print("Starting MCP server in stdio mode...")
