@@ -118,7 +118,8 @@ async def search_resources(dataset_id: int, search_filters: ResourceSearchFilter
             "created": x.get("attributes", {}).get("created"),
             "data_date": x.get("attributes", {}).get("data_date"),
             "dataset_id": x.get("relationships", {}).get("dataset", {}).get("data", {}).get("id"),
-            "institution_id": x.get("relationships", {}).get("institution", {}).get("data", {}).get("id")
+            "institution_id": x.get("relationships", {}).get("institution", {}).get("data", {}).get("id"),
+            "media_type": x.get("attributes", {}).get("media_type"),
         }
         for x in data
     ]

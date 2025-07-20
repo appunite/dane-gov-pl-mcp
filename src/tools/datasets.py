@@ -129,6 +129,7 @@ async def search_datasets(search_filters: DatasetSearchFilters) -> list[dict]:
             "created": x.get("attributes", {}).get("created"),
             "institution_id": x.get("relationships", {}).get("institution", {}).get("data", {}).get("id"),
             "resources_count": x.get("relationships", {}).get("resources", {}).get("meta", {}).get("count"),
+            "types": x.get("attributes", {}).get("types"),
         }
         for x in data
     ]
