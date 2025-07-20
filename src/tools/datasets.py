@@ -1,4 +1,6 @@
 from typing import Optional, List, Literal
+from datetime import datetime
+from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
 import polars as pl
@@ -6,9 +8,9 @@ import polars as pl
 from src.utils.server_config import mcp
 from src.tools.utils import _get
 
-class DatasetSearchFilters(BaseModel):
-    """Data object for dataset search.
-    NOTE: there is AND operator between category filters, so setting both similar categories might reduce number of results. Using only one of them is recommended."""
+
+class GeneralSearchFilters(BaseModel):
+    """General search filters."""
     page: Optional[int] = Field(1, description="Page number, default 1")
     per_page: Optional[int] = Field(25, description="Number of items per page, default 25. Max is 100")
     
@@ -21,16 +23,8 @@ class DatasetSearchFilters(BaseModel):
     title_prefix: Optional[str] = Field(None, description="Searches for instances that starts with the provided value in title. (e.g., 'eco')")
     title_phrase: Optional[str] = Field(None, description="searches for instances in which title exactly matches the provided phrase. (e.g., 'water level')")
 
-
-    keywords_term: Optional[str] = Field(None, description="Filters instances in which keyword matches to the provided single value. (e.g., 'environment')")
-    keywords_terms: Optional[str] = Field(None, description="Filters instances in which keyword matches to any of the provided values. (e.g., 'water', 'water,environment')")
-
-    notes_match: Optional[str] = Field(None, description="Searches for instances in which notes matches the provided value. (e.g., 'economics')")
-    
-    categories_1: Optional[str] = Field(None, description="Filters instances in which categories from list_categories_1 ID matches to any of the provided value. (e.g., '140', '140,139')")
-    categories_2: Optional[str] = Field(None, description="Filters instances in which categories from list_categories_2 ID matches to any of the provided value. (e.g., '43', '43,20')")
-
-    institution_terms: Optional[str] = Field(None, description="Filters instances in which institution ID matches to any of the provided value. (e.g., '24', '24,123')")
+    created_from: Optional[str] = Field(None, description="Filters resources in which created_at is greater than or equal to the provided value. (e.g., '2024-03-20', '2021-03')")
+    created_to: Optional[str] = Field(None, description="Filters resources in which created_at is less than or equal to the provided value. (e.g., '2024-03-20', '2021-03')")
 
     @field_validator("page")
     def validate_page(cls, v):
@@ -43,10 +37,53 @@ class DatasetSearchFilters(BaseModel):
         if v < 1 or v > 100:
             raise ValueError("Per page must be between 1 and 100")
         return v
+    
+    @field_validator("created_from", "created_to")
+    def validate_created_date(cls, v):
+        if v is None:
+            return v
+            
+        formats = [
+            "%Y-%m-%d",          # 2024-03-20
+            "%Y-%m",             # 2024-03
+            "%Y",                # 2024
+            "%Y-%m-%dT%H:%M:%SZ" # 2017-03-29T09:26:22Z
+        ]
+        
+        for fmt in formats:
+            try:
+                datetime.strptime(v, fmt)
+                return v
+            except ValueError:
+                continue
+                
+        raise ValueError("Date must be in format YYYY-MM-DD, YYYY-MM, YYYY or YYYY-MM-DDThh:mm:ssZ")
+
+
+class DatasetSearchFilters(GeneralSearchFilters):
+    """Data object for dataset search."""
+
+    keywords_term: Optional[str] = Field(None, description="Filters instances in which keyword matches to the provided single value. (e.g., 'environment')")
+    keywords_terms: Optional[str] = Field(None, description="Filters instances in which keyword matches to any of the provided values. (e.g., 'water', 'water,environment')")
+
+    notes_match: Optional[str] = Field(None, description="Searches for instances in which notes matches the provided value. (e.g., 'economics')")
+    
+    categories_1: Optional[str] = Field(None, description="Filters instances in which categories from list_categories_1 ID matches to any of the provided value. (e.g., '140', '140,139')")
+    categories_2: Optional[str] = Field(None, description="Filters instances in which categories from list_categories_2 ID matches to any of the provided value. (e.g., '43', '43,20')")
+
+    institution_terms: Optional[str] = Field(None, description="Filters instances in which institution ID matches to any of the provided value. (e.g., '24', '24,123')")
+
+
+class DatasetResourcesFilters(GeneralSearchFilters):
+    """Data object for dataset resources search."""
+
+    description_prefix: Optional[str] = Field(None, description="Searches for resources that starts with the provided value in description. (e.g., 'Nat')")
+    description_phrase: Optional[str] = Field(None, description="searches for resources in which description matches the provided phrase. (e.g., 'National')")
+
 
 
 @mcp.tool()
-async def search_datasets_advanced(search_filters: DatasetSearchFilters) -> dict:
+async def search_datasets_advanced(search_filters: DatasetSearchFilters) -> list[dict]:
     """Advanced dataset search with filters."""
     params = {}
     if search_filters.page:
@@ -76,6 +113,11 @@ async def search_datasets_advanced(search_filters: DatasetSearchFilters) -> dict
     if search_filters.keywords_terms:
         params["keywords[terms]"] = search_filters.keywords_terms
 
+    if search_filters.created_from:
+        params["created[gte]"] = search_filters.created_from
+    if search_filters.created_to:
+        params["created[lte]"] = search_filters.created_to
+
     if search_filters.notes_match:
         params["notes[match]"] = search_filters.notes_match
 
@@ -88,7 +130,22 @@ async def search_datasets_advanced(search_filters: DatasetSearchFilters) -> dict
         params["institution[id][terms]"] = search_filters.institution_terms
 
     data = await _get("/datasets", params=params)
-    return data.get("data", {})
+    data = data.get("data", [])
+    return [
+        {
+            "id": x.get("id"),
+            "title": x.get("attributes", {}).get("title"),
+            "notes": x.get("attributes", {}).get("notes"),
+            "update_frequency": x.get("attributes", {}).get("update_frequency"),
+            "category": x.get("attributes", {}).get("category", {}).get("title"),
+            "keywords": x.get("attributes", {}).get("keywords"),
+            "created": x.get("attributes", {}).get("created"),
+            "institution_id": x.get("relationships", {}).get("institution", {}).get("data", {}).get("id"),
+            "resources_count": x.get("relationships", {}).get("resources", {}).get("meta", {}).get("count"),
+        }
+        for x in data
+    ]
+
 
 
 @mcp.tool()
@@ -102,28 +159,87 @@ async def get_datasets_details(dataset_ids: list[int]) -> list[dict]:
 
 
 @mcp.tool()
-async def list_categories_1() -> dict:
-    """List all available categories_1 for dataset filtering."""
-    # Load ./data/categories_unique.csv
+async def list_categories_1() -> list[dict]:
+    """List all available categories_1 for dataset filtering. There is AND operator between categories_1 and categories_2 filters, 
+    so setting similar categories for both might reduce number of results. Using only one of them is recommended."""
+    project_root = Path(__file__).parent.parent.parent
+    categories_file = project_root / "data" / "categories_unique.csv"
+    
     try:
-        df = pl.read_csv("./data/categories_unique.csv")
+        df = pl.read_csv(str(categories_file))
     except FileNotFoundError:
-        raise FileNotFoundError("Category 1 file not found. Run `python -m src.utils.update_categories` to update the file.")
+        raise FileNotFoundError(f"Category 1 file not found at {categories_file}. Run `python -m src.utils.update_categories` to update the file.")
     return df.to_dicts()
 
 
 @mcp.tool()
-async def list_categories_2() -> dict:
-    """List all available categories_2 for dataset filtering."""
-    # Load ./data/category_unique.csv
+async def list_categories_2() -> list[dict]:
+    """List all available categories_2 for dataset filtering. There is AND operator between categories_1 and categories_2 filters, 
+    so setting similar categories for both might reduce number of results. Using only one of them is recommended."""
+    project_root = Path(__file__).parent.parent.parent
+    categories_file = project_root / "data" / "category_unique.csv"
+    
     try:
-        df = pl.read_csv("./data/category_unique.csv")
+        df = pl.read_csv(str(categories_file))
     except FileNotFoundError:
-        raise FileNotFoundError("Category 2 file not found. Run `python -m src.utils.update_categories` to update the file.")
+        raise FileNotFoundError(f"Category 2 file not found at {categories_file}. Run `python -m src.utils.update_categories` to update the file.")
     return df.to_dicts()
 
 
-# if __name__ == "__main__":
-#     import asyncio
-#     x = asyncio.run(list_categories_1())
-#     print(f"{x}\n{len(x)}")
+@mcp.tool()
+async def list_dataset_resources(dataset_id: int, search_filters: DatasetResourcesFilters) -> list[dict]:
+    """Get resources for a specific dataset."""
+    params = {}
+    if search_filters.page:
+        params["page"] = search_filters.page
+    if search_filters.per_page:
+        params["per_page"] = search_filters.per_page
+
+    if search_filters.query_all:
+        params["q"] = search_filters.query_all
+
+    if search_filters.sort:
+        if search_filters.sort_order:
+            if search_filters.sort_order == "asc":
+                params["sort"] = search_filters.sort
+            else:
+                params["sort"] = f"-{search_filters.sort}"
+
+    if search_filters.title_match:
+        params["title[match]"] = search_filters.title_match
+    if search_filters.title_prefix:
+        params["title[prefix]"] = search_filters.title_prefix
+    if search_filters.title_phrase:
+        params["title[phrase]"] = search_filters.title_phrase
+    
+    if search_filters.created_from:
+        params["created[gte]"] = search_filters.created_from
+    if search_filters.created_to:
+        params["created[lte]"] = search_filters.created_to
+
+    if search_filters.description_prefix:
+        params["description[prefix]"] = search_filters.description_prefix
+    if search_filters.description_phrase:
+        params["description[phrase]"] = search_filters.description_phrase
+    
+    data = await _get(f"/datasets/{dataset_id}/resources", params=params)
+    data = data.get("data", [])
+    return [
+        {
+            "id": x.get("id"),
+            "title": x.get("attributes", {}).get("title"),
+            "description": x.get("attributes", {}).get("description"),
+            "format": x.get("attributes", {}).get("format"),
+            "file_size": x.get("attributes", {}).get("file_size"),
+            "download_url": x.get("attributes", {}).get("download_url"),
+            "created": x.get("attributes", {}).get("created"),
+            "data_date": x.get("attributes", {}).get("data_date")
+        }
+        for x in data
+    ]
+
+
+if __name__ == "__main__":
+    import asyncio
+    x = asyncio.run(list_categories_2())
+    print(f"{x}\n{len(x)}")

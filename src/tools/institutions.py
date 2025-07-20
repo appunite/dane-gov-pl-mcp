@@ -114,7 +114,7 @@ async def get_institutions_details(institution_ids: list[int]) -> list[dict]:
 
 
 @mcp.tool()
-async def get_institutions_datasets(institution_ids: list[int]) -> dict[list[dict]]:
+async def get_institutions_datasets(institution_ids: list[int]) -> dict[int, list[dict]]:
     """Get datasets of a specific institutions."""
     # TODO: It also needs pagination and allows filtering etc.
     datasets = {}
