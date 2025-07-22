@@ -1,9 +1,7 @@
 from typing import Optional, List, Literal
 from datetime import datetime
-from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
-import polars as pl
 
 from src.utils.server_config import mcp
 from src.tools.utils import _get
@@ -33,6 +31,8 @@ class ResourceSearchFilters(BaseModel):
     dataset_id_terms: Optional[List[int]] = Field(None, description="Filters resources in which dataset ID matches to any of the provided value. (e.g., '2,5,7')")
     dataset_title_phrase: Optional[str] = Field(None, description="searches for resources in which dataset title matches the provided phrase. (e.g., 'water level')")
     
+    id_terms: Optional[List[int]] = Field(None, description="Filters resources in which ID matches to any of the provided value. (e.g., '2,5,7')")
+
     @field_validator("page")
     def validate_page(cls, v):
         if v < 1:
@@ -65,7 +65,7 @@ class ResourceSearchFilters(BaseModel):
 
 
 @mcp.tool()
-async def search_resources(dataset_id: int, search_filters: ResourceSearchFilters) -> list[dict]:
+async def search_resources(search_filters: ResourceSearchFilters) -> list[dict]:
     """Get resources for a specific dataset."""
     params = {}
     if search_filters.page:
@@ -105,7 +105,7 @@ async def search_resources(dataset_id: int, search_filters: ResourceSearchFilter
     if search_filters.dataset_title_phrase:
         params["dataset[title][phrase]"] = search_filters.dataset_title_phrase
 
-    data = await _get(f"/datasets/{dataset_id}/resources", params=params)
+    data = await _get(f"/resources", params=params)
     data = data.get("data", [])
     return [
         {
