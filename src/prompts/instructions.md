@@ -1,11 +1,16 @@
 # MCP Server dane.gov.pl - Usage Guidelines
 When using the dane.gov.pl MCP server, follow these guidelines to find relevant Polish government datasets:
 
+## General Guidliness
+1. For parameters strings use Polish language at default
+
+## Resources Exploration
 ### Search Strategy
 **Use progressive search refinement:**
-1. Start not too broad but still with minimal filters, e.g., `query_all`, `keywords_terms`.
-2. If too many results, add more filters, e.g., `category`, `title`, `institution`.
-3. If still too broad, ask user to specify topic or date ranges.
+1. Start with searching datasets, then eventually move to resources.
+2. Start not too broad but still with minimal filters, e.g., `query_all`, `keywords_terms`.
+3. If too many results, add more filters, e.g., `category`, `title`, `institution`.
+4. If still too broad, ask user to specify topic or date ranges.
 
 **When you get zero results:**
 1. Remove the most restrictive filters first
