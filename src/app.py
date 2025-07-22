@@ -83,26 +83,32 @@ if __name__ == "__main__":
         asyncio.run(_log_registered_tools())
     
     if args.transport == "stdio":
-        print("Starting MCP server in stdio mode...")
+        if args.debug:
+            print("Starting MCP server in stdio mode...")
         mcp.run(
             transport=args.transport,
+            show_banner=args.debug,
         )
 
     elif args.transport == "streamable-http":
-        print(f"Starting MCP server in streamable-http mode at http://{args.host}:{args.port}{args.path}")
+        if args.debug:
+            print(f"Starting MCP server in streamable-http mode at http://{args.host}:{args.port}{args.path}")
         mcp.run(
             transport=args.transport,
             path=args.path,
             host=args.host,
             port=args.port,
+            show_banner=args.debug,
         )
 
     elif args.transport == "sse":
-        print(f"Starting MCP server in SSE mode at http://{args.host}:{args.port}{args.path}")
+        if args.debug:
+            print(f"Starting MCP server in SSE mode at http://{args.host}:{args.port}{args.path}")
         mcp.run(
             transport=args.transport,
             path=args.path,
             host=args.host,
             port=args.port,
+            show_banner=args.debug,
         )
 
