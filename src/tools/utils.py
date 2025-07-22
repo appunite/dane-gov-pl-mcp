@@ -1,10 +1,8 @@
 from datetime import datetime
 import httpx
 
+from src.utils.server_config import _TIMEOUT, _API
 
-
-_API = f"https://api.dane.gov.pl/"
-_TIMEOUT = httpx.Timeout(30.0, connect=5.0)
 
 
 async def _get(path: str, params: dict | None = None) -> dict:
