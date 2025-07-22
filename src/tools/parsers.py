@@ -23,7 +23,7 @@ async def list_file_formats() -> list[str]:
 
 
 @mcp.tool()
-async def get_file_content(resource_ids: list[int]) -> str:
+async def get_file_content(resource_ids: list[int]) -> dict:
     """
     Downloads file content for given resource IDs. `media_type` for the resource must be 'file'.
     Available file formats can be listed with `list_file_formats` tool.
