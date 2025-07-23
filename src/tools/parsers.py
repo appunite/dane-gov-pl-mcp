@@ -2,6 +2,7 @@ import httpx
 import io
 import json
 import re
+import csv
 
 from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.csv import partition_csv
@@ -40,7 +41,7 @@ async def get_file_content(resource_ids: list[int]) -> dict:
     results = {}
     for resource in resources:
         resource_id = resource.get("id")
-        url = resource.get("attributes").get("download_url")
+        url = resource.get("attributes").get("file_url")
 
         if resource.get("attributes").get("media_type") != "file":
             results[resource_id] = f"media_type {resource.get('attributes').get('media_type')} is not a 'file'"
@@ -70,7 +71,6 @@ async def fetch_file_content(url: str, format: str) -> str:
             if response.status_code != 200:
                 return f"HTTP {response.status_code}: Failed to fetch file"
 
-            # Use Unstructured for document parsing
             if format == "pdf":
                 return await parse_pdf_content(response.content)
             elif format in ["docx", "doc"]:
@@ -79,13 +79,13 @@ async def fetch_file_content(url: str, format: str) -> str:
                 return await parse_html_content(response.text)
             elif format in ["xlsx", "xls"]:
                 return await parse_excel_content(response.content)
-            elif format in ["pptx", "ppt"]:
-                return await parse_powerpoint_content(response.content)
-            elif format == "csv":
+            elif format in ["csv", "tsv"]:
                 return await parse_csv_content(response.text)
-            elif format == "json":
+            elif format in ["json", "geojson", "jsonld"]:
                 return await parse_json_content(response.text)
-            elif format == "txt":
+            elif format == "xml":
+                return await parse_xml_content(response.text)
+            elif format in ["txt"]:
                 return clean_text_for_llm(response.text)
             else:
                 return response.text
@@ -94,24 +94,21 @@ async def fetch_file_content(url: str, format: str) -> str:
         return f"Error fetching file: {str(e)}"
 
 
-async def parse_json_content(json_text: str) -> str:
-    """Parse JSON content."""
-    try:
-        parsed = json.loads(json_text)
-        return json.dumps(parsed, indent=2, ensure_ascii=False)
-    except json.JSONDecodeError:
-        return json_text
-
-
 def clean_text_for_llm(text: str) -> str:
     """Clean text for optimal LLM consumption."""
+    try:
+        text = clean_extra_whitespace(text)
+    except:
+        pass
+    try:
+        text = clean_bullets(text)
+    except:
+        pass
+    try:
+        text = clean_ordered_bullets(text)
+    except:
+        pass
 
-    # Remove excessive whitespace and clean structure
-    text = clean_extra_whitespace(text)
-    text = clean_bullets(text)
-    text = clean_ordered_bullets(text)
-
-    # Fix common issues
     text = re.sub(r'\n{3,}', '\n\n', text)  # Max 2 consecutive newlines
     text = re.sub(r'[ \t]{2,}', ' ', text)  # Multiple spaces to single space
 
@@ -128,13 +125,11 @@ def elements_to_markdown(elements) -> str:
 
         text = element.text.strip()
 
-        # Format based on element type
         if element.category == "Title":
             markdown_sections.append(f"# {text}")
         elif element.category == "Header":
             markdown_sections.append(f"## {text}")
         elif element.category == "Table":
-            # Preserve table structure
             markdown_sections.append(f"```\n{text}\n```")
         elif element.category == "ListItem":
             markdown_sections.append(f"- {text}")
@@ -147,10 +142,42 @@ def elements_to_markdown(elements) -> str:
     return clean_text_for_llm(content)
 
 
+def detect_csv_separator(csv_text: str) -> str:
+    """Detect the separator used in CSV content."""
+    try:
+        # Use csv.Sniffer to detect delimiter
+        sniffer = csv.Sniffer()
+        # Take first few lines for detection
+        sample = '\n'.join(csv_text.split('\n')[:10])
+        dialect = sniffer.sniff(sample, delimiters=';,\t|')
+        return dialect.delimiter
+    except:
+        # Common separators in order of preference for Polish data
+        separators = [';', ',', '\t', '|']
+        lines = csv_text.split('\n')[:5]  # Check first 5 lines
+        
+        for sep in separators:
+            counts = [line.count(sep) for line in lines if line.strip()]
+            if counts and all(c > 0 and c == counts[0] for c in counts):
+                return sep
+        
+        # Default fallback
+        return ','
+
+
+async def parse_json_content(json_text: str) -> str:
+    """Parse JSON content."""
+    try:
+        parsed = json.loads(json_text)
+        return json.dumps(parsed, indent=2, ensure_ascii=False)
+    except json.JSONDecodeError:
+        return json_text
+
+
 async def parse_pdf_content(pdf_bytes: bytes) -> str:
     """Extract structured content from PDF using Unstructured."""
     try:
-        elements = partition_pdf(file=io.BytesIO(pdf_bytes), strategy="polish")
+        elements = partition_pdf(file=io.BytesIO(pdf_bytes), languages=["polish"])
         return elements_to_markdown(elements)
     except Exception as e:
         return f"Error parsing PDF: {str(e)}"
@@ -183,19 +210,12 @@ async def parse_excel_content(excel_bytes: bytes) -> str:
         return f"Error parsing Excel: {str(e)}"
 
 
-async def parse_powerpoint_content(ppt_bytes: bytes) -> str:
-    """Extract structured content from PowerPoint using Unstructured."""
-    try:
-        elements = partition(file=io.BytesIO(ppt_bytes), content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")
-        return elements_to_markdown(elements)
-    except Exception as e:
-        return f"Error parsing PowerPoint: {str(e)}"
-
-
 async def parse_csv_content(csv_text: str) -> str:
     """Parse CSV content using Unstructured and format as clean markdown table."""
     try:
-        elements = partition_csv(text=csv_text, encoding="utf-8")
+        # Detect separator
+        separator = detect_csv_separator(csv_text)
+        elements = partition_csv(text=csv_text, encoding="utf-8", csv_args={"delimiter": separator})
         
         # Convert elements to clean markdown
         table_text = ""
@@ -210,7 +230,35 @@ async def parse_csv_content(csv_text: str) -> str:
         return f"```csv\n{csv_text}\n```"
 
 
+async def parse_xml_content(xml_text: str) -> str:
+    """Extract structured content from XML using Unstructured."""
+    try:
+        xml_bytes = xml_text.encode('utf-8')
+        xml_file = io.BytesIO(xml_bytes)
+        elements = partition(file=xml_file, content_type="application/xml")
+        return elements_to_markdown(elements)
+    except Exception as e:
+        return f"Error parsing XML: {str(e)}"
+
+
+
 # if __name__ == "__main__":
+#     format_resource_id = {
+#         "csv": [17243],
+#         "tsv": [40769, 56651],
+#         "json": [29745, 29730, 29728],
+#         "geojson": [44008],
+#         "jsonld": [51836],
+#         "pdf": [2228, 36],
+#         "docx": [62358],
+#         "doc": [35783, 1375],
+#         "html": [],
+#         "txt": [21674, 28002, 53255],
+#         "xls": [25657, 6044, 5202],
+#         "xlsx": [63723, 725, 703],
+#         "xml": [46153]
+#     }
 #     import asyncio
-#     x = asyncio.run(get_file_content([8, 12, 40, 58]))
-#     print(x)
+#     x = asyncio.run(get_file_content(format_resource_id["xml"]))
+#     for k, v in x.items():
+#         print(k, v)
