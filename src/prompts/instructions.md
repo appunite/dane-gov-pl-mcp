@@ -1,66 +1,129 @@
 # MCP Server dane.gov.pl - Usage Guidelines
-When using the dane.gov.pl MCP server, follow these guidelines to find relevant Polish government datasets:
 
-## General Guidliness
-1. For parameters strings use Polish language at default
+## Main Purpose & Functionality
 
-## Resources Exploration
-### Search Strategy
-**Use progressive search refinement:**
-1. Start with searching datasets, then eventually move to resources.
-2. Start not too broad but still with minimal filters, e.g., `query_all`, `keywords_terms`.
-3. If too many results, add more filters, e.g., `category`, `title`, `institution`.
-4. If still too broad, ask user to specify topic or date ranges.
+The dane.gov.pl MCP server provides access to Poland's central open data portal, bridging Polish government datasets with AI applications. The server offers two distinct functionalities:
 
-**When you get zero results:**
-1. Remove the most restrictive filters first
-2. Remove `categories_2` first (the AND operator between categories_1 and categories_2 is very restrictive)
-3. Try broader keywords instead of specific terms
-4. Remove date constraints (`created_from`/`created_to`)
-5. Check if you're mixing unrelated categories (e.g., Health + Environment will return nothing)
+1. **Search & Discovery** - Explore datasets, resources, institutions, and showcases through metadata search
+2. **Data Fetching** - Download and parse actual file content from government resources
 
-### Category Usage
+Users typically start by exploring/researching available data, then may eventually proceed to fetch actual file content for analysis.
 
-**Understand the dual category system:**
-- Always call `list_categories_1` and `list_categories_2` to see available options
-- `categories_1` and `categories_2` are separate classification systems
-- Using both creates an AND filter (very restrictive)
-- Recommended: use only `categories_1` unless you need precise intersection
-- Never mix unrelated categories from different systems
+### Data Structure & Relationships
+- **Institutions** - Government organizations that publish data (ministries, agencies, research institutes)
+- **Datasets** - Collections of related resources published by institutions (e.g., "Air Quality Monitoring")
+- **Resources** - Individual resource (usually file) within datasets (CSV, PDF, Excel files containing actual data)
+- **Showcases** - Real-world applications, visualizations, and analyses that use the datasets
 
-### Pagination and Results
+**Hierarchy**: Institution → Dataset → Resource | Showcases reference Datasets
 
-**Handle large result sets:**
-- Start with `per_page: 10` to get overview
-- Use `page: 2, 3, etc.` to browse through results
-- Sort by `views_count` (desc) to get most popular datasets first
-- Sort by `created` (desc) to get newest datasets first
+---
 
-### Keyword Strategy
-**Use multiple approaches:**
-- `query_all`: searches everything with boolean operators
-- `keywords_terms`: comma-separated exact keyword matching
-- `title_match`: searches in titles only
-- `title_phrase`: exact phrase matching in titles
+## 🔍 Search & Discovery Functionality
 
-**Polish content:**
-- Most of the content is Polish, use Polish language for searching (`środowisko`, `zanieczyszczenie`, etc.)
-- Use plural and singular forms
+**This is free, non-invasive exploration of metadata.** Users can research topics, find relevant datasets, explore institutions, and discover sfiles/howcases without any restrictions.
 
-### Institution Filtering
-**Find relevant institutions if user specifies interest:**
-- Search institutions by city, description, or name
-- Get institution IDs, then filter datasets by `institution_terms`
-- Focus on major institutions like GUS (ID: 34), ministries, or research institutes
+### Search Strategy & Results Handling
 
-### Example Workflow
-1. Call `ai-gov-pl:instructions`
-2. List categories to understand classification
-3. Start with broad search using `query_all` and `key_words`
-4. Examine results and note relevant category IDs
-5. Refine search with appropriate category filter
-6. Get detailed information for promising datasets
-7. If needed, explore the responsible institutions
-8. Use pagination to browse through larger result sets
+**When searching datasets/resources, handle results based on quantity:**
 
-Remember: The server contains around 4,000 datasets and 10,000 resources, so start not too broad and progressively narrow down your search criteria.
+- **Too Many Results (>5 datasets or >20 resources):**
+  - Explain the amount of results found
+  - Provide a brief overview of the search results
+  - Ask user if they want to specify the topic further
+  - Note: 20 similar resources (e.g., monthly time series) may be acceptable
+
+- **Ideal Results (≤5 datasets or ≤20 resources):**
+  - Continue with the search and present results
+
+- **No Results:**
+  - Try searching in English if original search was in Polish
+  - Search for similar/related topics
+  - Try searching resources with institutions
+  - Inform user about the situation and search attempts
+
+### Research Enhancement
+
+**When user is researching/exploring:**
+- **Showcases**: Explore showcases to find real-world applications and visualizations of similar data
+- Ask user if they want to see showcases related to their topic
+- **Institutions**: Search institutions when no direct results found or when user shows interest in specific organizations
+- **Datasets vs Resources**: Start with datasets (collections), then drill down to resources (individual files) within promising datasets
+
+### Search Language Strategy
+- **Use Polish search terms by default** despite conversation language, as most content is in Polish
+- Use English search terms if Polish search yields no results
+- Try both plural and singular forms when appropriate
+
+---
+
+## 📁 Data Fetching Functionality
+
+**This involves downloading actual file content and requires careful handling.**
+
+### User Intent Detection
+**Only proceed with file content fetching when user explicitly mentions:**
+- File content or downloading
+- Explicit requests like "download the files", "get file content"
+- **NOT** when user says "analyze data" or "the data" (these refer to search results)
+
+### Pre-Fetch Confirmation Requirements
+
+**Always ask for confirmation before fetching files, except when explicitly specified in the first query.**
+
+**Before fetching, provide user with:**
+- List of **available** resources with titles (users identify by titles, not IDs)
+- File format for each resource
+- File size for each resource
+- Only list resources that are actually fetchable (supported format, has download URL, media_type is "file")
+- If there are unavailable resources, inform user separately and provide their resource URLs for manual access
+
+### File Size & Quantity Limits
+
+**File Size Warnings:**
+- Warn user and ask for confirmation if any file is >10MB
+- List specific files that exceed the limit
+
+**Quantity Limits:**
+- If >15 files total: ask for confirmation or ask user to specify what exactly they're interested in
+- Provide both options: proceed with all files or specify subset
+
+### File Content Handling
+- Maximum 100 resources per request
+- Only process files with `media_type: "file"`
+- **Check supported formats** using `list_file_formats` before attempting to fetch
+
+
+---
+
+## General Guidelines
+
+### Progressive Search Refinement
+1. Begin with specific filters based on user query (e.g., relevant categories, keywords, institutions)
+2. Adjust filters based on results while staying on the same topic:
+   - **Too many results**: Tighten filters (add more categories, date ranges, institution filters)
+   - **Too few/no results**: Loosen filters (remove restrictive categories, broaden keywords, remove date constraints)
+3. Do not drift to different topics - topic changes are handled separately in search strategy
+
+### Category System Management
+- Use `list_categories_1` and `list_categories_2` to see available options
+- Never mix unrelated categories from two lists (creates very restrictive AND filter)
+- Remove category filters if no results - they may be too restrictive
+
+### Pagination & Sorting Strategy
+- **Large result sets**: Start with `per_page: 10` for overview, use pagination to browse
+- **Popular content**: Sort by `views_count` (desc) to get most popular datasets first
+- **Recent content**: Sort by `created` (desc) to get newest datasets first
+- **Relevance**: Default sorting often works best for text searches
+
+### Institution Integration
+- Search institutions when user shows interest in specific organizations
+- Use institution filtering to narrow down dataset searches
+- Consider institution searches when other approaches yield no results
+
+### Language & Content Considerations
+- Most content is in Polish - use Polish search terms by default
+- Parameter strings should use Polish language as default
+- Fall back to English only when Polish yields no results
+
+**Remember: Keep search/discovery free and exploratory, but be cautious and confirmatory with actual data fetching.**
