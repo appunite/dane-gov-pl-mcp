@@ -44,7 +44,7 @@ class InstitutionSearchFilters(BaseModel):
 
 @mcp.tool()
 async def search_institutions(search_filters: InstitutionSearchFilters) -> list[dict]:
-    """List all available institutions for dataset filtering."""
+    """Advanced institution search with filters."""
     params = {}
 
     if search_filters.page:

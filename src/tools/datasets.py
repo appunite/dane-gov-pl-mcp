@@ -137,7 +137,7 @@ async def search_datasets(search_filters: DatasetSearchFilters) -> list[dict]:
 
 @mcp.tool()
 async def get_datasets_details(dataset_ids: list[int]) -> list[dict]:
-    """Return entire dataset data."""
+    """Get details of a specific datasets."""
     details = []
     for id in dataset_ids:
         data = await _get(f"/datasets/{id}")

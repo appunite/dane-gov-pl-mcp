@@ -66,7 +66,7 @@ class ResourceSearchFilters(BaseModel):
 
 @mcp.tool()
 async def search_resources(search_filters: ResourceSearchFilters) -> list[dict]:
-    """Get resources for a specific dataset."""
+    """Advanced resource search with filters."""
     params = {}
     if search_filters.page:
         params["page"] = search_filters.page
