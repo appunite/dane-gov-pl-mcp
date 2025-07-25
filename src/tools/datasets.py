@@ -1,4 +1,4 @@
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 from datetime import datetime
 from pathlib import Path
 
@@ -82,11 +82,10 @@ async def search_datasets(search_filters: DatasetSearchFilters) -> list[dict]:
         params["q"] = search_filters.query_all
 
     if search_filters.sort:
-        if search_filters.sort_order:
-            if search_filters.sort_order == "asc":
-                params["sort"] = search_filters.sort
-            else:
-                params["sort"] = f"-{search_filters.sort}"
+        if search_filters.sort_order == "desc":
+            params["sort"] = f"-{search_filters.sort}"
+        else:
+            params["sort"] = search_filters.sort
 
     if search_filters.title_match:
         params["title[match]"] = search_filters.title_match

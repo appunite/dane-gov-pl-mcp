@@ -46,11 +46,8 @@ async def search_showcases(search_filters: ShowcaseSearchFilters) -> list[dict]:
         params["q"] = search_filters.query_all
 
     if search_filters.sort:
-        if search_filters.sort_order:
-            if search_filters.sort_order == "asc":
-                params["sort"] = search_filters.sort
-            else:
-                params["sort"] = f"-{search_filters.sort}"
+        if search_filters.sort_order == "desc":
+            params["sort"] = f"-{search_filters.sort}"
         else:
             params["sort"] = search_filters.sort
 

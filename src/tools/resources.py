@@ -1,4 +1,4 @@
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
@@ -28,10 +28,10 @@ class ResourceSearchFilters(BaseModel):
     description_prefix: Optional[str] = Field(None, description="Searches for resources that starts with the provided value in description. (e.g., 'Nat')")
     description_phrase: Optional[str] = Field(None, description="searches for resources in which description matches the provided phrase. (e.g., 'National')")
 
-    dataset_id_terms: Optional[List[int]] = Field(None, description="Filters resources in which dataset ID matches to any of the provided value. (e.g., '2,5,7')")
+    dataset_id_terms: Optional[str] = Field(None, description="Filters resources in which dataset ID matches to any of the provided value. (e.g., '2,5,7')")
     dataset_title_phrase: Optional[str] = Field(None, description="searches for resources in which dataset title matches the provided phrase. (e.g., 'water level')")
     
-    id_terms: Optional[List[int]] = Field(None, description="Filters resources in which ID matches to any of the provided value. (e.g., '2,5,7')")
+    id_terms: Optional[str] = Field(None, description="Filters resources in which ID matches to any of the provided value. (e.g., '2,5,7')")
 
     @field_validator("page")
     def validate_page(cls, v):
@@ -77,11 +77,10 @@ async def search_resources(search_filters: ResourceSearchFilters) -> list[dict]:
         params["q"] = search_filters.query_all
 
     if search_filters.sort:
-        if search_filters.sort_order:
-            if search_filters.sort_order == "asc":
-                params["sort"] = search_filters.sort
-            else:
-                params["sort"] = f"-{search_filters.sort}"
+        if search_filters.sort_order == "desc":
+            params["sort"] = f"-{search_filters.sort}"
+        else:
+            params["sort"] = search_filters.sort
 
     if search_filters.title_match:
         params["title[match]"] = search_filters.title_match
