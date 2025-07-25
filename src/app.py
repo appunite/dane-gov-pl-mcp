@@ -2,7 +2,7 @@ import argparse
 import asyncio
 
 from src.utils.server_config import mcp
-from src.tools import datasets, resources, institutions, showcases, parsers, utils # noqa: F401
+from src.tools import datasets, resources, institutions, showcases, tabular, parsers, utils # noqa: F401
 from src.prompts import prompts # noqa: F401
 
 
