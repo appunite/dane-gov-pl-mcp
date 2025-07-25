@@ -150,3 +150,17 @@ We welcome contributions! This project aims to make Polish government data more 
 - [dane.gov.pl](https://dane.gov.pl) - Poland's Open Data Portal
 - [API Documentation](https://api.dane.gov.pl/doc) - Official API docs
 - [Technical Standard](https://dane.gov.pl/media/ckeditor/2020/06/16/standard-techniczny.pdf) - Data standards
+
+## Authors
+
+Dane-gov-pl-mcp is created by _Appunite_.
+
+Since 2010, [Appunite](https://appunite.com/) is a collective of software engineers, product builders, and problem solvers. We partner with bold teams to tackle product and business challenges—designing custom-built squads that ship fast and think strategically. From AI-enabled workflows to mobile platforms and cloud-native systems, we deliver end-to-end execution with full accountability.
+
+Looking for your unfair advantage in tech execution? [Talk to us](https://www.appunite.com/get-in-touch).
+
+Copyright 2025, [Appunite](https://appunite.com/)
+
+![Appunite](https://appunite-logo.s3.eu-central-1.amazonaws.com/Appunite-Logo-Long-Black-200.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAYXIIMCOVBPWI5LPJ%2F20250725%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20250725T112818Z&X-Amz-Expires=300&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBwaDGV1LWNlbnRyYWwtMSJGMEQCIHfIdYSUQEu%2FlT1lF%2FA7Fex2lKRykD7mJywiqlTFi%2FcUAiA9FuvTBLT%2FM8I5aaS%2F%2F2rpoHLegtwinRtCRVkdvV52wCraAghFEAAaDDU5OTcwMjM3NzM4NiIMTWQuYjXDhP%2BN0dTbKrcCAar%2FXqFN1E0Enf6%2FJ0svIQrwSaYFfdorLg1G2O1F%2BgihAjoIlenp%2FQsv%2FEkaPve4TVm2Hs2tPChPSx5Zd0Ukivg6%2FIrglZxgss4BbaOqzhXHKEDc9QOf%2BdBDAJm7T0syQrQRtfVArJbs9gzSOhjo3EM06ALAlicZRtYThKxct7vAnLqrP%2Bg98xwvNAKwNtweiu34yD%2Ba8S9HiY%2FslkWgYIvmYB91gWQko6wVSS5toiQlHjp%2FOfA9MztepfxYrSkBkRDO3wX6rf5RhUbvIpCxEkR%2BnVgXwPISVObyqBCdujb7iY8MoGdym7JqW%2BBIbhKr8tkbaxfbE0BpZXYvImlV7ENcWY2Jao8zILrdX3eXCx6VPRGv9RGh%2Bm7DZ36s7PCmAcCRnwxTVYBXYkTZ5q%2B5mFvg7emsGGgw3s6NxAY6rgJRJ3lIN%2BaxfzUEiQEhnYHxdAKH9PE2UN9fqZJYCg6%2BzlkymXeGW2povLck%2B%2FfbPldDNym60%2FnhGu028KLD0RMB6U52jRrcvhQXrmqvwpY4K0rG2O6OToowy6Ykgxk6aIocryj2QStaLIS92lydr1a3G0P7BFUZoXXI9%2BgfaDYRhQuAS7o74CxqEqXfvsNMcvZAqKck0MLqjw9qTZCoF%2Bj8TmOIl%2F1j7gWq5SNZ9dQ4cRrrmRKDvbUTtWFDyr6m6JPOL6z134oAZRzc4rw6IXtsEqlPvKI62gkjQjHbNN817nHjdwcgfCIRtCU6OqWFov5KPFg4JswdkzECUIlyZwXY0Va7V7zRjoUUvysQY3zbWn305nZNN%2BxJtN8rk3Gb4GblXAZgHwjkk7jZWskOSg%3D%3D&X-Amz-Signature=8dfc7eefb30311ae9afd52f4a4c1b44817e090fe7a4f90ceec273deef4bb2435&X-Amz-SignedHeaders=host&response-content-disposition=inline)
+
+Licensed under the [MIT License](LICENSE)
