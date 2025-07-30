@@ -41,7 +41,7 @@ async def get_file_content(resource_ids: list[int]) -> dict:
     results = {}
     for resource in resources:
         resource_id = resource.get("id")
-        url = resource.get("attributes").get("file_url")
+        url = resource.get("attributes").get("download_url")
 
         if resource.get("attributes").get("media_type") != "file":
             results[resource_id] = f"media_type {resource.get('attributes').get('media_type')} is not a 'file'"
