@@ -1,10 +1,40 @@
 import argparse
 import asyncio
+import shutil
+from pathlib import Path
 
 from src.utils.server_config import mcp
 from src.tools import datasets, resources, institutions, showcases, tabular, parsers, utils # noqa: F401
 from src.prompts import prompts # noqa: F401
 
+
+def _manage_cache(clear_cache: bool = True, debug: bool = False):
+    """Manage the data cache directory."""
+    cache_dir = Path("./data/cache")
+    
+    if clear_cache and cache_dir.exists():
+        if debug:
+            print("🗑️  Clearing cache directory...")
+        try:
+            shutil.rmtree(cache_dir)
+            if debug:
+                print("✅ Cache directory cleared successfully")
+        except Exception as e:
+            if debug:
+                print(f"❌ Error clearing cache directory: {e}")
+    
+    # Create cache directory if it doesn't exist
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        if not clear_cache:
+            if debug:
+                print("📁 Cache directory ready")
+        else:
+            if debug:
+                print("📁 Cache directory recreated")
+    except Exception as e:
+        if debug:
+            print(f"❌ Error creating cache directory: {e}")
 
 
 async def _log_registered_tools():
@@ -61,6 +91,12 @@ def parse_args() -> argparse.Namespace:
         default="False",
         help="Enable debug mode."
     )
+    parser.add_argument(
+        "--clear-cache",
+        choices=["True", "False"],
+        default="True",
+        help="Clear cache directory on startup (default: True)."
+    )
 
     parser_args = parser.parse_args()
 
@@ -72,6 +108,7 @@ def parse_args() -> argparse.Namespace:
         parser_args.path = None
 
     parser_args.debug = parser_args.debug != "False"
+    parser_args.clear_cache = parser_args.clear_cache != "False"
 
     return parser_args
 
@@ -79,6 +116,8 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = parse_args()
 
+    _manage_cache(clear_cache=args.clear_cache, debug=args.debug)
+    
     if args.debug:
         asyncio.run(_log_registered_tools())
     
