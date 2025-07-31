@@ -114,11 +114,10 @@ async def search_resources(search_filters: ResourceSearchFilters) -> list[dict]:
             "format": x.get("attributes", {}).get("format"),
             "file_size": x.get("attributes", {}).get("file_size"),
             "download_url": x.get("attributes", {}).get("download_url"),
-            "created": x.get("attributes", {}).get("created"),
-            "data_date": x.get("attributes", {}).get("data_date"),
             "dataset_id": x.get("relationships", {}).get("dataset", {}).get("data", {}).get("id"),
             "institution_id": x.get("relationships", {}).get("institution", {}).get("data", {}).get("id"),
             "media_type": x.get("attributes", {}).get("media_type"),
+            "tabular_data_available": True if x.get("relationships", {}).get("tabular_data", {}) != {} else False
         }
         for x in data
     ]
@@ -135,6 +134,7 @@ async def get_resources_details(resource_ids: list[int]) -> list[dict]:
         attributes["id"] = data.get("id")
         attributes["dataset_id"] = data.get("relationships", {}).get("dataset", {}).get("data", {}).get("id", None)
         attributes["institution_id"] = data.get("relationships", {}).get("institution", {}).get("data", {}).get("id", None)
+        attributes["tabular_data_available"] = True if data.get("relationships", {}).get("tabular_data", {}) != {} else False
         details.append(attributes)
     return details
 

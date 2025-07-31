@@ -141,7 +141,8 @@ async def _download_file_streaming(url: str, file_path: Path) -> tuple[bool, Exc
 
 @mcp.tool()
 async def get_tabular_resource_metadata(resource_ids: list[int]) -> dict:
-    """Get tabular resources metadata including data schema, headers, count of rows and first row."""
+    """Get resources metadata including data schema, headers, count of rows and first row.
+    Use this tool only for resources with tabular data available."""
     params = {
         "per_page": 1,
     }
@@ -164,6 +165,7 @@ async def get_tabular_resource_metadata(resource_ids: list[int]) -> dict:
 @mcp.tool()
 async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFrameOperations) -> dict:
     """
+    Use this tool only for resources with tabular data available.
     Loads tabular resource file into Polars DataFrame with advanced grouping and aggregation capabilities.
     
     Use column names like: col1, col2, col3 (col1=first column, col2=second column, etc.).

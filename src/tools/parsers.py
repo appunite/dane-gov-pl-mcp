@@ -29,6 +29,7 @@ async def get_file_content(resource_ids: list[int]) -> dict:
     Downloads file content for given resource IDs. `media_type` for the resource must be 'file'.
     Available file formats can be listed with `list_file_formats` tool.
     Maximum number of resources in one request is 100.
+    Don't use if resource has tabular data available. Use `resource_to_dataframe` tool instead.
     """
 
     params = {
