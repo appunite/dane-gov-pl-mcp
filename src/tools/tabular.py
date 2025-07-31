@@ -52,7 +52,8 @@ class TabularDataFilters(BaseModel):
 @mcp.tool()
 async def get_tabular_data(resource_id: int, search_filters: TabularDataFilters) -> dict:
     """Search and filter tabular data within a specific resource using advanced query capabilities. 
-    Returns metadata androws as a list of dictionaries."""
+    Returns metadata and rows as a list of dictionaries. 
+    It's useful when grouping or aggregating data isn't necessary."""
     params = {}
     if search_filters.page:
         params["page"] = search_filters.page
@@ -85,8 +86,6 @@ async def get_tabular_data(resource_id: int, search_filters: TabularDataFilters)
     return result
 
 
-
-
 class DataFrameOperations(BaseModel):
     """Data object for dataframe operations."""
     primary_group: Optional[str] = Field(None, description="Primary grouping column (e.g., 'col1')")
@@ -95,7 +94,7 @@ class DataFrameOperations(BaseModel):
     aggregation: Optional[Literal["count", "sum", "mean", "median", "min", "max", "std", "var"]] = Field(None, description="Aggregation function to apply")
     aggregation_column: Optional[str] = Field(None, description="Column to aggregate (required if aggregation is specified)")
     
-    filters: Optional[str] = Field(None, description="Polars filter expression (e.g., 'col(\"col1\") > 100')")
+    filters: Optional[str] = Field(None, description="Polars filter expression (e.g., 'col1 > 100')")
     
     sort_columns: Optional[list[str]] = Field(None, description="List of columns to sort by (e.g., ['col1', 'col2'])")
     sort_descending: Optional[list[bool]] = Field(None, description="Sort order for each column (True for descending)")
@@ -115,7 +114,7 @@ class DataFrameOperations(BaseModel):
         return v
     
 
-async def _download_file_streaming(url: str, file_path: Path) -> bool:
+async def _download_file_streaming(url: str, file_path: Path) -> tuple[bool, Exception]:
     """Download file using streaming to handle large files efficiently."""
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
@@ -126,15 +125,14 @@ async def _download_file_streaming(url: str, file_path: Path) -> bool:
                     async for chunk in response.aiter_bytes(chunk_size=8192):
                         f.write(chunk)
                 
-                return True
+                return True, None
     except Exception as e:
-        print(f"Error downloading file: {e}")
-        return False
+        return False, e
 
 
 @mcp.tool()
 async def get_tabular_resource_metadata(resource_ids: list[int]) -> dict:
-    """Get tabular resources metadata including data schema, headers, aggregations, count of rows and first row."""
+    """Get tabular resources metadata including data schema, headers, count of rows and first row."""
     params = {
         "per_page": 1,
     }
@@ -144,11 +142,12 @@ async def get_tabular_resource_metadata(resource_ids: list[int]) -> dict:
         meta = data.get("meta", {})
         data = data.get("data", {})
         row_data = {}
-        row_data["count"] = meta.get("count", 0)
-        row_data["data_schema"] = meta.get("data_schema", {})
-        row_data["headers_map"] = meta.get("headers_map", {})
-        row_data["aggregations"] = meta.get("aggregations", {})
-        row_data["rows"] = data[0].get("attributes", {})
+        row_data = {
+            "count": meta.get("count", 0),
+            "data_schema": meta.get("data_schema", {}),
+            "headers_map": meta.get("headers_map", {}),
+            "first_row": data[0].get("attributes", {})
+        }
         result[id] = row_data
     return result
 
@@ -156,8 +155,11 @@ async def get_tabular_resource_metadata(resource_ids: list[int]) -> dict:
 @mcp.tool()
 async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFrameOperations) -> dict:
     """
-    Downloads tabular resource file, caches it, loads into Polars DataFrame with streaming and applies operations.
-    Uses column indexes: col1=0, col2=1, col3=2, etc. Works with or without headers.
+    Loads tabular resource file into Polars DataFrame allowing grouping and aggregation.
+    Use column names like: col1, col2, col3.
+    After aggregation, original columns are replaced by grouping columns plus the aggregated result (e.g., 'sum', 'count').
+    After aggregation, not all columns are available. Use aggregation name like 'sum' or 'count' to access new column. 
+    Old columns, if available, have the same col{index} name.
     """
     try:
         # Get resource details to obtain download URL and format
@@ -179,7 +181,10 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
             return {"error": f"File format is '{file_format}', expected one of {TABULAR_FORMATS}"}  
         
         # Check if file is already cached (any format)
-        cache_dir = Path("./data/cache").resolve()
+        # Use absolute path to ensure it works in both local and MCP contexts
+        project_root = Path(__file__).parent.parent.parent
+        cache_dir = project_root / "data" / "cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
         existing_files = list(cache_dir.glob(f"resource_{resource_id}.*"))
         
         if existing_files:
@@ -190,9 +195,9 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
             cached_file = cache_dir / f"resource_{resource_id}.{file_format.lower()}"
             
             # Download file using streaming (memory-efficient)
-            success = await _download_file_streaming(download_url, cached_file)
+            success, error_msg_download = await _download_file_streaming(download_url, cached_file)
             if not success:
-                return {"error": "Failed to download file"}
+                return {"error": f"Failed to download file: {error_msg_download}\nDownload URL: {download_url}\nDownload path: {cached_file}"}
         
         actual_format = cached_file.suffix[1:].lower()
         
@@ -340,6 +345,7 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
                         lf = lf.group_by(group_cols).agg(agg_col.std().alias("std"))
                     elif dataframe_operations.aggregation == "var":
                         lf = lf.group_by(group_cols).agg(agg_col.var().alias("var"))
+                
             
             # 4. Sorting
             if dataframe_operations.sort_columns:
@@ -405,13 +411,12 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
         return {"error": f"Error accessing resource: {str(e)}"}
 
 
-# Example usage:
 if __name__ == "__main__":
     import asyncio
     # df_ops = DataFrameOperations(sort_columns=["col1"], select_columns=["col1", "col2"])
     # df_ops = DataFrameOperations(filters="col7 > 500000", primary_group="col6", aggregation="count")
-    df_ops = DataFrameOperations(primary_group="col6", aggregation="sum", aggregation_column="col7", sort_columns=["sum"], sort_descending=[True], row_limit=3)
-    # 15274 - xlsx | 3353 - xlsx | 14988 - csv
+    df_ops = DataFrameOperations(primary_group="col6", secondary_group="col3", aggregation="sum", aggregation_column="col7", sort_columns=["sum", "col6"], sort_descending=[True, False], row_limit=3)
+    # 15274 - xlsx | 3353 - xlsx | 14988 - csv | 65390
     x = asyncio.run(resource_to_dataframe(3353, df_ops))
     print(x)
 
