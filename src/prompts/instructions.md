@@ -48,7 +48,16 @@ Users typically start by exploring/researching available data, then may eventual
 - **Showcases**: Explore showcases to find real-world applications and visualizations of similar data
 - Ask user if they want to see showcases related to their topic
 - **Institutions**: Search institutions when no direct results found or when user shows interest in specific organizations
-- **Datasets vs Resources**: Start with datasets (collections), then drill down to resources (individual files) within promising datasets
+- **Datasets vs Resources Strategy**:
+  - **Specific queries**: Start with resources (individual files) when user asks for specific data (e.g., "tax shares of local governments in CIT 2024")
+  - **General queries**: Start with datasets (collections) when user asks broad questions (e.g., "information about CIT taxes")
+  - **When dataset results are only "promising" but not direct matches**: Always try searching resources to find more specific/relevant content, then analyze parent datasets upward
+  - **Upward analysis**: When finding relevant resources, explore their parent datasets to discover additional related resources
+
+### Data Quality Prioritization
+- **Prefer high-quality tabular data**: Look for resources with `media_type: "file"` and `tabular_data_available: True` for the best analytical value
+- When multiple resources are available, prioritize those that offer structured, machine-readable data formats
+- Mention data quality indicators (tabular availability, file formats) when presenting options to users
 
 ### Search Language Strategy
 - **Use Polish search terms by default** despite conversation language, as most content is in Polish
