@@ -91,12 +91,12 @@ class DataFrameOperations(BaseModel):
     primary_group: Optional[str] = Field(None, description="Primary grouping column (e.g., 'col1')")
     secondary_group: Optional[str] = Field(None, description="Secondary grouping column (e.g., 'col2')")
     
-    aggregation: Optional[Literal["count", "sum", "mean", "median", "min", "max", "std", "var"]] = Field(None, description="Aggregation function to apply")
-    aggregation_column: Optional[str] = Field(None, description="Column to aggregate (required if aggregation is specified)")
+    aggregations: Optional[list[Literal["count", "sum", "mean", "median", "min", "max", "std", "var"]]] = Field(None, description="List of aggregation functions to apply")
+    aggregation_columns: Optional[list[str]] = Field(None, description="List of columns to aggregate (must match length of aggregations)")
     
     filters: Optional[str] = Field(None, description="Polars filter expression (e.g., 'col1 > 100')")
     
-    sort_columns: Optional[list[str]] = Field(None, description="List of columns to sort by (e.g., ['col1', 'col2'])")
+    sort_columns: Optional[list[str]] = Field(None, description="List of columns to sort by (e.g., ['col1', 'col2'] or ['col8_sum', 'col9_mean'])")
     sort_descending: Optional[list[bool]] = Field(None, description="Sort order for each column (True for descending)")
     
     row_limit: Optional[int] = Field(None, description="Maximum number of rows to return")
@@ -112,6 +112,15 @@ class DataFrameOperations(BaseModel):
     @field_validator("sort_columns", "sort_descending") 
     def validate_sort_consistency(cls, v):
         return v
+    
+    def model_post_init(self, __context):
+        if self.aggregations is not None and self.aggregation_columns is not None:
+            if len(self.aggregations) != len(self.aggregation_columns):
+                raise ValueError("Length of aggregations must match length of aggregation_columns")
+        if self.aggregations is not None and self.aggregation_columns is None:
+            raise ValueError("aggregation_columns is required when aggregations is specified")
+        if self.aggregation_columns is not None and self.aggregations is None:
+            raise ValueError("aggregations is required when aggregation_columns is specified")
     
 
 async def _download_file_streaming(url: str, file_path: Path) -> tuple[bool, Exception]:
@@ -155,11 +164,15 @@ async def get_tabular_resource_metadata(resource_ids: list[int]) -> dict:
 @mcp.tool()
 async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFrameOperations) -> dict:
     """
-    Loads tabular resource file into Polars DataFrame allowing grouping and aggregation.
-    Use column names like: col1, col2, col3.
-    After aggregation, original columns are replaced by grouping columns plus the aggregated result (e.g., 'sum', 'count').
-    After aggregation, not all columns are available. Use aggregation name like 'sum' or 'count' to access new column. 
-    Old columns, if available, have the same col{index} name.
+    Loads tabular resource file into Polars DataFrame with advanced grouping and aggregation capabilities.
+    
+    Use column names like: col1, col2, col3 (col1=first column, col2=second column, etc.).
+    
+    For aggregations: aggregations=["sum", "mean"], aggregation_columns=["col8", "col9"] → creates columns "col8_sum", "col9_mean"
+    Same column can have multiple aggregations: aggregations=["sum", "mean"], aggregation_columns=["col8", "col8"] → creates "col8_sum", "col8_mean"
+    
+    After aggregation, original columns are replaced by grouping columns plus aggregated results.
+    For sorting after aggregation, use the generated column names (e.g., sort_columns=["col8_sum", "col9_mean"]).
     """
     try:
         # Get resource details to obtain download URL and format
@@ -313,7 +326,7 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
                     return {"error": f"Invalid filter expression '{dataframe_operations.filters}' (converted to: '{filter_expr}'): {str(e)}"}
             
             # 3. Grouping and Aggregation  
-            if dataframe_operations.primary_group or dataframe_operations.aggregation:
+            if dataframe_operations.primary_group or dataframe_operations.aggregations:
                 group_cols = []
                 if dataframe_operations.primary_group:
                     primary_name = _col_to_name(dataframe_operations.primary_group, df_columns)
@@ -322,29 +335,37 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
                     secondary_name = _col_to_name(dataframe_operations.secondary_group, df_columns)
                     group_cols.append(pl.col(secondary_name))
                 
-                if group_cols and dataframe_operations.aggregation:
-                    if dataframe_operations.aggregation_column:
-                        agg_col_name = _col_to_name(dataframe_operations.aggregation_column, df_columns)
-                        agg_col = pl.col(agg_col_name)
-                    else:
-                        agg_col = group_cols[0]  # Use first group column
+                # Handle aggregations
+                if group_cols and dataframe_operations.aggregations and dataframe_operations.aggregation_columns:
+                    agg_exprs = []
+                    for agg_func, agg_col in zip(dataframe_operations.aggregations, dataframe_operations.aggregation_columns):
+                        agg_col_name = _col_to_name(agg_col, df_columns)
+                        agg_col_expr = pl.col(agg_col_name)
+                        
+                        # Create alias with suffix: col8_sum, col9_mean, etc.
+                        alias_name = f"{agg_col}_{agg_func}"
+                        
+                        if agg_func == "count":
+                            agg_exprs.append(pl.len().alias(alias_name))
+                        elif agg_func == "sum":
+                            agg_exprs.append(agg_col_expr.sum().alias(alias_name))
+                        elif agg_func == "mean":
+                            agg_exprs.append(agg_col_expr.mean().alias(alias_name))
+                        elif agg_func == "median":
+                            agg_exprs.append(agg_col_expr.median().alias(alias_name))
+                        elif agg_func == "min":
+                            agg_exprs.append(agg_col_expr.min().alias(alias_name))
+                        elif agg_func == "max":
+                            agg_exprs.append(agg_col_expr.max().alias(alias_name))
+                        elif agg_func == "std":
+                            agg_exprs.append(agg_col_expr.std().alias(alias_name))
+                        elif agg_func == "var":
+                            agg_exprs.append(agg_col_expr.var().alias(alias_name))
                     
-                    if dataframe_operations.aggregation == "count":
-                        lf = lf.group_by(group_cols).agg(pl.len().alias("count"))
-                    elif dataframe_operations.aggregation == "sum":
-                        lf = lf.group_by(group_cols).agg(agg_col.sum().alias("sum"))
-                    elif dataframe_operations.aggregation == "mean":
-                        lf = lf.group_by(group_cols).agg(agg_col.mean().alias("mean"))
-                    elif dataframe_operations.aggregation == "median":
-                        lf = lf.group_by(group_cols).agg(agg_col.median().alias("median"))
-                    elif dataframe_operations.aggregation == "min":
-                        lf = lf.group_by(group_cols).agg(agg_col.min().alias("min"))
-                    elif dataframe_operations.aggregation == "max":
-                        lf = lf.group_by(group_cols).agg(agg_col.max().alias("max"))
-                    elif dataframe_operations.aggregation == "std":
-                        lf = lf.group_by(group_cols).agg(agg_col.std().alias("std"))
-                    elif dataframe_operations.aggregation == "var":
-                        lf = lf.group_by(group_cols).agg(agg_col.var().alias("var"))
+                    lf = lf.group_by(group_cols).agg(agg_exprs)
+                
+                    # Update column names after aggregation since structure has changed
+                    df_columns = lf.collect_schema().names()
                 
             
             # 4. Sorting
@@ -377,7 +398,7 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
                     "operations_applied": {
                         "filtering": bool(dataframe_operations.filters),
                         "grouping": bool(dataframe_operations.primary_group or dataframe_operations.secondary_group),
-                        "aggregation": dataframe_operations.aggregation,
+                        "aggregations": dataframe_operations.aggregations,
                         "sorting": bool(dataframe_operations.sort_columns),
                         "row_limit": dataframe_operations.row_limit,
                         "column_selection": bool(dataframe_operations.select_columns)
@@ -394,7 +415,7 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
                     "operations_applied": {
                         "filtering": bool(dataframe_operations.filters),
                         "grouping": bool(dataframe_operations.primary_group or dataframe_operations.secondary_group),
-                        "aggregation": dataframe_operations.aggregation,
+                        "aggregations": dataframe_operations.aggregations,
                         "sorting": bool(dataframe_operations.sort_columns),
                         "row_limit": dataframe_operations.row_limit,
                         "column_selection": bool(dataframe_operations.select_columns)
@@ -411,13 +432,19 @@ async def resource_to_dataframe(resource_id: int, dataframe_operations: DataFram
         return {"error": f"Error accessing resource: {str(e)}"}
 
 
-if __name__ == "__main__":
-    import asyncio
-    # df_ops = DataFrameOperations(sort_columns=["col1"], select_columns=["col1", "col2"])
-    # df_ops = DataFrameOperations(filters="col7 > 500000", primary_group="col6", aggregation="count")
-    df_ops = DataFrameOperations(primary_group="col6", secondary_group="col3", aggregation="sum", aggregation_column="col7", sort_columns=["sum", "col6"], sort_descending=[True, False], row_limit=3)
-    # 15274 - xlsx | 3353 - xlsx | 14988 - csv | 65390
-    x = asyncio.run(resource_to_dataframe(3353, df_ops))
-    print(x)
+# if __name__ == "__main__":
+#     import asyncio
+#     df_ops = DataFrameOperations(
+#         primary_group="col3",
+#         aggregations=["sum", "mean", "sum", "mean"],
+#         aggregation_columns=["col8", "col8", "col9", "col9"],
+#         sort_columns=["col8_sum", "col9_mean"], 
+#         sort_descending=[True, True],
+#         row_limit=5
+#     )
+#     # 15274 - xlsx | 3353 - xlsx | 14988 - csv | 65390 - xlsx
+#     x = asyncio.run(resource_to_dataframe(65390, df_ops))
+#     for i in x['data']:
+#         print(i)
 
     
