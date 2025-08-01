@@ -26,17 +26,16 @@ An open-source MCP Server that:
 
 ## 🚀 Current State
 
-The project is currently in the **exploration and validation phase**. Core discovery functionality is implemented and working:
+The project is in its **final stages of development**. All core functionality is implemented and tested, with ongoing quality-of-life improvements and bug fixes being made:
 
 ### ✅ Available Features
 - **Institution Search** - Find and filter government institutions by name, city, description
 - **Dataset Discovery** - Search datasets by keywords, titles, and descriptions  
 - **Resource Listing** - Browse individual data files within datasets
+- **Showcases Search** - Find real-world visualizations and applications that use the datasets
 - **Metadata Access** - Get detailed information about institutions, datasets, and resources
-
-### 🔄 In Development
-- **Data Parsing Layer** - Convert resources into common Polars DataFrame format
-- **LLM Processing** - Enable grouping, aggregating, filtering, and sorting operations
+- **Data Parsing** - Convert resources into LLM-ready Markdown documents
+- **LLM Processing** - Enable grouping, aggregating, filtering, and sorting operations for tabular data resources (loaded into Polars DataFrames)
 - **Chart Integration** - Visualize processed data through MCP chart tools
 
 ## 🏗️ Architecture
@@ -45,11 +44,11 @@ The system comprises three distinct functionality layers:
 
 ```
 ┌─────────────────┐
-│    Discovery    │  ← Search & filter datasets/resources/institutions
+│    Discovery    │  ← Search & filter datasets/resources/institutions/showcases
 ├─────────────────┤
-│     Parsing     │  ← Convert all resources to Polars DataFrames  
+│     Parsing     │  ← Convert resources LLM ready Markdown documents 
 ├─────────────────┤
-│   Processing    │  ← LLM-powered operations on structured data
+│   Processing    │  ← LLM-powered operations on Polars dataframes
 └─────────────────┘
 ```
 
@@ -59,11 +58,11 @@ The system comprises three distinct functionality layers:
 - Browse resources within selected datasets
 - Access comprehensive metadata
 
-### Parsing Layer *(Planned)*
-- Convert CSV, JSON, XML, HTML and other files to Polars DataFrames
+### Parsing Layer
+- Convert CSV, JSON, XLSX, PDF and other files to Markdown documents
 - Support for most of the resources in optimal formats
 
-### Processing Layer *(Planned)*  
+### Processing Layer
 - Data operations (group, filter, aggregate)
 - Integration with visualization tools
 
@@ -117,22 +116,40 @@ Add to your MCP client configuration (e.g., Claude Desktop, Cursor):
 
 ## 📖 Usage Examples
 
-### Search for Environmental Data
+### Discovery
 ```python
-# Find all datasets related to air quality
-search_datasets(query="air quality", category="environment")
+# Search datasets by keywords
+search_datasets(search_filters={"query_all": "environment"})
 
-# Get institutions monitoring water resources  
-search_institutions(description_phrase="water", city_terms="Warszawa")
+# Find institutions by location
+search_institutions(search_filters={"city_terms": "Warszawa"})
+
+# Get dataset details
+get_resources_details(dataset_ids=[123, 456])
 ```
 
-### Discover Government Resources
+### Document Parsing
 ```python
-# Browse all datasets from a specific institution
-get_institution_datasets(institution_id=123)
+# Parse files to Markdown
+get_file_content(resource_ids=[123, 456])
+```
 
-# Get detailed metadata for a dataset
-get_dataset_details(dataset_id=456)
+### Tabular Data Processing
+```python
+# Get resource metadata
+get_tabular_resource_metadata(resource_ids=[123])
+
+# Query tabular data
+get_tabular_data(resource_id=123, search_filters={"q": "col1:Warszawa"})
+
+# Advanced DataFrame operations
+resource_to_dataframe(resource_id=123, dataframe_operations={
+    "primary_group": "col1",
+    "aggregations": ["sum", "mean"],
+    "aggregation_columns": ["col2", "col2"],
+    "sort_columns"=["col2_sum", "col1"], 
+    "sort_descending"=[True, False]
+})
 ```
 
 ## 🤝 Contributing
