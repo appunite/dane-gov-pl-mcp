@@ -70,8 +70,9 @@ The system comprises three distinct functionality layers:
 
 - **Python** - Core development language
 - **FastMCP** - MCP server framework
-- **Polars** - High-performance data processing
 - **Pydantic** - Data validation and serialization
+- **Polars** - High-performance data processing
+- **Unstructured** - Document parsing and extraction for PDFs, CSVs and other formats
 - **Fly.io** - Deployment platform
 
 ## 🚀 Installation & Setup
