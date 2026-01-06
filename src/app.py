@@ -113,14 +113,15 @@ def parse_args() -> argparse.Namespace:
     return parser_args
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the MCP server CLI."""
     args = parse_args()
 
     _manage_cache(clear_cache=args.clear_cache, debug=args.debug)
-    
+
     if args.debug:
         asyncio.run(_log_registered_tools())
-    
+
     if args.transport == "stdio":
         if args.debug:
             print("Starting MCP server in stdio mode...")
@@ -150,4 +151,8 @@ if __name__ == "__main__":
             port=args.port,
             show_banner=args.debug,
         )
+
+
+if __name__ == "__main__":
+    main()
 
