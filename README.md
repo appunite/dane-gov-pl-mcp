@@ -103,17 +103,29 @@ Add to your MCP client configuration (e.g., Claude Desktop, Cursor):
 {
   "mcpServers": {
     "dane-gov-pl-mcp": {
-      "command": "/path/to/dane-gov-pl-mcp/.venv/bin/python",
-      "args": ["-m", "src.app", "--transport", "stdio"],
-      "cwd": "/path/to/dane-gov-pl-mcp",
-      "env": {
-        "PYTHONPATH": "/path/to/dane-gov-pl-mcp",
-        "PYTHONUNBUFFERED": "1"
-      }
+      "command": "uvx",
+      "args": ["dane-gov-pl-mcp"]
     }
   }
 }
 ```
+
+<details>
+<summary>Alternative: Local Development Setup</summary>
+
+For local development without PyPI:
+
+```json
+{
+  "mcpServers": {
+    "dane-gov-pl-mcp": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/dane-gov-pl-mcp", "dane-gov-pl-mcp"]
+    }
+  }
+}
+```
+</details>
 
 ## 📖 Usage Examples
 
